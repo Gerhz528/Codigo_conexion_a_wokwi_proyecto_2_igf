@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semáforo RFID</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+</head>
+<body>
+
+<h1>Control de Acceso</h1>
+
+<div class="semaforo-box">
+    <div id="luz-izq" class="luz izq">⬅️</div>
+    <div id="luz-frente" class="luz frente">⬆️</div>
+    <div id="luz-der" class="luz der">➡️</div>
+    <div id="luz-rojo" class="luz rojo">🛑</div>
+</div>
+
+<div class="info" id="texto-info">
+    Esperando lectura RFID...
+</div>
+
+<script>
+    const evtSource = new EventSource("/stream");
+
+    evtSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+
+        // 1. Apagar todas las luces
+        document.querySelectorAll('.luz').forEach(l => l.classList.remove('activa'));
+        const textoInfo = document.getElementById('texto-info');
+
+        // 2. Encender la correspondiente
+        if (data.zona === 'A') {
+            document.getElementById('luz-izq').classList.add('activa');
+            textoInfo.innerText = `UID ${data.uid} autorizado: Ir a la IZQUIERDA (Zona A)`;
+        } else if (data.zona === 'B') {
+            document.getElementById('luz-der').classList.add('activa');
+            textoInfo.innerText = `UID ${data.uid} autorizado: Ir a la DERECHA (Zona B)`;
+        } else if (data.zona === 'C') {
+            document.getElementById('luz-frente').classList.add('activa');
+            textoInfo.innerText = `UID ${data.uid} autorizado: Ir al FRENTE (Zona C)`;
+        } else if (data.zona === 'DENEGADO') {
+            document.getElementById('luz-rojo').classList.add('activa');
+            textoInfo.innerText = `UID ${data.uid} NO AUTORIZADO`;
+        }
+    };
+</script>
+</body>
+</html>

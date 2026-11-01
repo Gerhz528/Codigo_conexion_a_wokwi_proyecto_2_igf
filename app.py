@@ -1,56 +1,53 @@
-from flask import Flask
-import paho.mqtt.client as mqtt
-import json
+import os
 import threading
+import time
 
-app = Flask(__name__)
+# Importamos las capas
+from infrastructure.repositories.sqlite_vehiculo_repository import SQLiteVehiculoRepository
+from infrastructure.messaging.mqtt_listener import MQTTListener
+from application.use_cases.procesar_lectura import ProcesarLecturaRFID
+import presentation.web_app as web_app
 
-# --- CONFIGURACIÓN MQTT ---
-BROKER = "broker.hivemq.com"
-TOPIC_LECTURA = "rfid/lecturas_proyecto_igf"
-TOPIC_RESPUESTA = "rfid/respuestas_proyecto_igf"
+# Variables globales para el Debounce (evitar doble lectura)
+ultimo_uid = ""
+ultimo_tiempo = 0
 
-# --- LÓGICA DEL DOMINIO (SIMULADA POR AHORA) ---
-def procesar_uid(uid):
-    print(f"UID recibido por MQTT: {uid}")
-    # Aquí después irá tu consulta a SQLite
-    if uid == "01020304":
-        return {"autorizado": True, "zona": "A"}
-    else:
-        return {"autorizado": False, "zona": None}
+def on_message_mqtt(client, userdata, msg):
+    global ultimo_uid, ultimo_tiempo
 
-# --- EVENTOS MQTT ---
-def on_connect(client, userdata, flags, rc):
-    print("Conectado al Broker MQTT. Código de resultado:", rc)
-    # Nos suscribimos al tema donde Wokwi envía las tarjetas
-    client.subscribe(TOPIC_LECTURA)
-    print(f"Escuchando en el topic: {TOPIC_LECTURA}")
-
-def on_message(client, userdata, msg):
-    # Cuando llega un mensaje de Wokwi
     uid = msg.payload.decode()
-    
-    # Procesamos el UID
-    resultado = procesar_uid(uid)
-    
-    # Publicamos la respuesta para que Wokwi la lea
-    client.publish(TOPIC_RESPUESTA, json.dumps(resultado))
-    print(f"Respuesta enviada a {TOPIC_RESPUESTA}: {resultado}")
+    tiempo_actual = time.time()
 
-# --- INICIAR MQTT EN UN HILO APARTE ---
-def iniciar_mqtt():
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(BROKER, 1883, 60)
-    client.loop_forever() # Bucle infinito escuchando mensajes
+    # Filtro anti-rebote
+    if uid == ultimo_uid and (tiempo_actual - ultimo_tiempo) < 2.0:
+        return
 
-# --- INICIAR FLASK ---
+    ultimo_uid = uid
+    ultimo_tiempo = tiempo_actual
+
+    # EJECUTAMOS EL CASO DE USO
+    resultado = caso_uso_procesar.ejecutar(uid)
+
+    # Actualizamos el estado global y enviamos a la cola
+    web_app.ultimo_estado = resultado
+    web_app.eventos_queue.put(resultado)
+    print(f"Leído: {uid} | Zona: {resultado['zona']}")
+
 if __name__ == '__main__':
-    # Lanzamos el cliente MQTT en un hilo separado para que no bloquee a Flask
-    hilo_mqtt = threading.Thread(target=iniciar_mqtt)
-    hilo_mqtt.daemon = True
-    hilo_mqtt.start()
+    # --- INYECCIÓN DE DEPENDENCIAS ---
 
-    print("Iniciando servidor Flask...")
-    app.run(host='0.0.0.0', port=5000)
+    # 1. Infraestructura
+    repositorio = SQLiteVehiculoRepository('rfid.db')
+    mqtt_listener = MQTTListener("broker.hivemq.com", "rfid/lecturas_proyecto", on_message_mqtt)
+
+    # 2. Aplicación
+    caso_uso_procesar = ProcesarLecturaRFID(repositorio)
+
+    # 3. Arrancar MQTT (evitando duplicados en debug)
+    if not os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        hilo_mqtt = threading.Thread(target=mqtt_listener.iniciar, daemon=True)
+        hilo_mqtt.start()
+
+    # 4. Arrancar Flask
+    app = web_app.crear_app()
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)

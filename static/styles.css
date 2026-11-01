@@ -1,0 +1,47 @@
+/* static/style.css */
+body {
+    background-color: #1e1e2e;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 50px;
+}
+.semaforo-box {
+    background-color: #313244;
+    padding: 30px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+.luz {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #45475a;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    opacity: 0.3;
+}
+.luz.activa {
+    opacity: 1;
+}
+.luz.activa.rojo { background-color: #f38ba8; box-shadow: 0 0 30px #f38ba8; }
+.luz.activa.izq { background-color: #a6e3a1; box-shadow: 0 0 30px #a6e3a1; }
+.luz.activa.der { background-color: #89b4fa; box-shadow: 0 0 30px #89b4fa; }
+.luz.activa.frente { background-color: #f9e2af; box-shadow: 0 0 30px #f9e2af; }
+
+.info {
+    margin-top: 20px;
+    font-size: 1.2em;
+    background: #313244;
+    padding: 15px 30px;
+    border-radius: 8px;
+}
