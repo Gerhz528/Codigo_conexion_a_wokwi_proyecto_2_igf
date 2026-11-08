@@ -2,10 +2,10 @@ import os
 import threading
 import time
 
-# Importamos las capas
+# Importacion de las capas
 from infrastructure.repositories.sqlite_vehiculo_repository import SQLiteVehiculoRepository
 from infrastructure.messaging.mqtt_listener import MQTTListener
-from application.use_cases.procesar_lectura import ProcesarLecturaRFID
+from application.use_case.procesar_lectura import ProcesarLecturaRFID
 import presentation.web_app as web_app
 
 # Variables globales para el Debounce (evitar doble lectura)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # 1. Infraestructura
     repositorio = SQLiteVehiculoRepository('rfid.db')
-    mqtt_listener = MQTTListener("broker.hivemq.com", "rfid/lecturas_proyecto", on_message_mqtt)
+    mqtt_listener = MQTTListener("broker.hivemq.com", "rfid/lecturas_proyecto_igf", on_message_mqtt)
 
     # 2. Aplicación
     caso_uso_procesar = ProcesarLecturaRFID(repositorio)
@@ -50,4 +50,4 @@ if __name__ == '__main__':
 
     # 4. Arrancar Flask
     app = web_app.crear_app()
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
