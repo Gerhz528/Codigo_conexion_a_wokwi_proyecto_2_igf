@@ -28,12 +28,18 @@ def on_message_mqtt(client, userdata, msg):
     # EJECUTAMOS EL CASO DE USO
     resultado = caso_uso_procesar.ejecutar(uid)
 
-    # Actualizamos el estado global y enviamos a la cola
-    web_app.ultimo_estado = resultado
-    web_app.eventos_queue.put(resultado)
-    print(f"Leído: {uid} | Zona: {resultado['zona']}")
+    # Salida por consola
+    print("\n" + "="*40)
+    print("LECTURA DE TARJETA RFID DETECTADA")
+    print("="*40)
+    print(f"UID:        {resultado['uid']}")
+    print(f"Nombre:     {resultado['nombre']}")
+    print(f"Autorizado: {'SÍ' if resultado['autorizado'] else 'NO'}")
+    print(f"Zona:       {resultado['zona']}")
+    print("="*40 + "\n")
 
 if __name__ == '__main__':
+    print("Iniciando...")
     # --- INYECCIÓN DE DEPENDENCIAS ---
 
     # 1. Infraestructura
@@ -48,6 +54,10 @@ if __name__ == '__main__':
         hilo_mqtt = threading.Thread(target=mqtt_listener.iniciar, daemon=True)
         hilo_mqtt.start()
 
-    # 4. Arrancar Flask
-    app = web_app.crear_app()
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    # Como no tenemos Flask ejecutándose, el programa principal se cerraría.
+    # Este bucle infinito mantiene la consola viva esperando lecturas.
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nCerrando sistema...")
