@@ -9,7 +9,7 @@ class MQTTListener:
         self.client.on_message = on_message_callback
 
     def _on_connect(self, client, userdata, flags, rc):
-        print(f"📡 MQTT Conectado (código {rc}). Escuchando en {self.topic}")
+        print(f" MQTT Conectado (código {rc}). Escuchando en {self.topic}")
         client.subscribe(self.topic)
 
     def iniciar(self):
